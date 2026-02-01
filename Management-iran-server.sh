@@ -7,6 +7,12 @@ RED='\033[0;31m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+# --- Add Alias for easy access ---
+if ! grep -q "iran-manager" ~/.bashrc; then
+    echo "alias iran-manager='$(pwd)/Management-iran-server.sh'" >> ~/.bashrc
+    source ~/.bashrc 2>/dev/null
+fi
+
 # --- Function to Install Packages via dpkg ---
 install_pkg() {
     local name=$1
@@ -27,15 +33,14 @@ change_ssh_port() {
     read -p "Enter new SSH port (Recommended: 8443 or 443): " new_port
     echo -e "${YELLOW}Changing SSH port to $new_port...${NC}"
     sudo sed -i "s/^#\?Port .*/Port $new_port/" /etc/ssh/sshd_config
-    # Open port in firewall if ufw is active
     if command -v ufw &> /dev/null; then
         sudo ufw allow $new_port/tcp
     fi
     sudo systemctl restart ssh
-    echo -e "${GREEN}SSH Port changed to $new_port. Please do NOT close this session before testing with a new terminal!${NC}"
+    echo -e "${GREEN}SSH Port changed to $new_port.${NC}"
 }
 
-# --- Function to Enable BBR (Speed Booster) ---
+# --- Function to Enable BBR ---
 enable_bbr() {
     echo -e "${YELLOW}Enabling BBR Speed Booster...${NC}"
     if ! grep -q "net.core.default_qdisc=fq" /etc/sysctl.conf; then
@@ -61,6 +66,11 @@ display_menu() {
     echo -e "${CYAN}==================================================${NC}"
     echo -e "${YELLOW}       SERVER MANAGEMENT & TUNNEL TOOLS          ${NC}"
     echo -e "${CYAN}==================================================${NC}"
+    echo -e "${RED}!!! SECURITY TIP !!!${NC}"
+    echo -e "${WHITE}Baraye amniat dar ghot'ie internet, aval ba dastoor:${NC}"
+    echo -e "${GREEN}tmux new -s management${NC}"
+    echo -e "${WHITE}vared shavid, sepas iran-manager ra ejra konid.${NC}"
+    echo -e "${CYAN}--------------------------------------------------${NC}"
     echo -e "1. Install Tools (Zip, JQ, Curl, Screen, Tmux, etc.)"
     echo -e "2. Set Timezone (Tehran) & UTF-8 (Persian Support)"
     echo -e "3. Configure & Lock DNS (Anti-Reset After Reboot)"
@@ -77,6 +87,7 @@ display_menu() {
     echo -e "10. Help: SSH Guide, Linux Commands, Screen/Tmux"
     echo -e "0. Exit"
     echo -e "${CYAN}--------------------------------------------------${NC}"
+    echo -e "${YELLOW}Shortcut command: ${GREEN}iran-manager${NC}"
 }
 
 while true; do
