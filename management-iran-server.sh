@@ -7,8 +7,7 @@ RED='\033[0;31m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-# --- Add Alias for easy access (REVISED) ---
-# اصلاح شده: استفاده از نام فایل با m کوچک برای هماهنگی کامل
+# --- Add Alias for easy access ---
 SCRIPT_PATH="$(pwd)/management-iran-server.sh"
 if ! grep -q "iran-manager" ~/.bashrc; then
     echo "alias iran-manager='$SCRIPT_PATH'" >> ~/.bashrc
@@ -31,6 +30,40 @@ install_pkg() {
     fi
 }
 
+# --- Function to Configure DNS & Hosts (Improved) ---
+setup_network_fix() {
+    echo -e "${YELLOW}Configuring DNS and Hosts file (Permanent Fix)...${NC}"
+    
+    # Unlock files for editing
+    sudo chattr -i /etc/resolv.conf /etc/hosts 2>/dev/null
+    
+    # Update Hosts for GitHub and others
+    if ! grep -q "raw.githubusercontent.com" /etc/hosts; then
+        echo -e "\n185.199.108.133 raw.githubusercontent.com" >> /etc/hosts
+        echo -e "185.199.109.133 raw.githubusercontent.com" >> /etc/hosts
+        echo -e "185.199.110.133 raw.githubusercontent.com" >> /etc/hosts
+        echo -e "185.199.111.133 raw.githubusercontent.com" >> /etc/hosts
+        echo -e "${GREEN}GitHub hosts added successfully.${NC}"
+    fi
+
+    # DNS Configuration Question
+    echo -e "1. Use Default DNS (8.8.8.8, 1.1.1.1)"
+    echo -e "2. Enter Custom DNS (Agar DNS ekhtesasi darid)"
+    read -p "Select DNS option: " dns_opt
+    
+    if [ "$dns_opt" == "2" ]; then
+        read -p "Enter Primary DNS (e.g. 10.10.10.10): " dns1
+        read -p "Enter Secondary DNS (e.g. 4.2.2.4): " dns2
+        echo -e "nameserver $dns1\nnameserver $dns2" > /etc/resolv.conf
+    else
+        echo -e "nameserver 8.8.8.8\nnameserver 1.1.1.1" > /etc/resolv.conf
+    fi
+    
+    # Lock files to prevent system from changing them after reboot
+    sudo chattr +i /etc/resolv.conf /etc/hosts
+    echo -e "${GREEN}DNS and Hosts are now LOCKED and will not reset!${NC}"
+}
+
 # --- Function to Change SSH Port ---
 change_ssh_port() {
     read -p "Enter new SSH port (Recommended: 8443 or 443): " new_port
@@ -40,7 +73,7 @@ change_ssh_port() {
         sudo ufw allow $new_port/tcp
     fi
     sudo systemctl restart ssh
-    echo -e "${GREEN}SSH Port changed to $new_port.${NC}"
+    echo -e "${GREEN}SSH Port changed to $new_port. Please test before logout!${NC}"
 }
 
 # --- Function to Enable BBR ---
@@ -76,7 +109,7 @@ display_menu() {
     echo -e "${CYAN}--------------------------------------------------${NC}"
     echo -e "1. Install Tools (Zip, JQ, Curl, Screen, Tmux, etc.)"
     echo -e "2. Set Timezone (Tehran) & UTF-8 (Persian Support)"
-    echo -e "3. Configure & Lock DNS (Anti-Reset After Reboot)"
+    echo -e "3. Fix DNS & Hosts (Permanent & Custom DNS Support)"
     echo -e "4. Rathole Tunnel - IRAN Server"
     echo -e "5. Rathole Tunnel - KHAREJ Server"
     echo -e "6. Watchdog Rathole (Install/Uninstall)"
@@ -110,17 +143,14 @@ while true; do
             install_pkg "htop" "https://bayanbox.ir/download/6700648099120155448/htop-2.2.0-2-arm64.deb"
             install_pkg "ping" "https://bayanbox.ir/download/3967816486007324840/iputils-ping-20250605-1ubuntu1-amd64.deb"
             install_pkg "vim" "https://bayanbox.ir/download/8165786091380549689/vim-8.1.2269-1ubuntu5.32-amd64.deb"
-            read -p "Press Enter..." ;;
+            read -p "Press Enter to return..." ;;
         2)
             sudo timedatectl set-timezone Asia/Tehran
             sudo localectl set-locale LANG=en_US.UTF-8
-            read -p "Done! Press Enter..." ;;
+            read -p "Time and Locale updated. Press Enter..." ;;
         3)
-            sudo chattr -i /etc/resolv.conf 2>/dev/null
-            echo -e "nameserver 8.8.8.8\nnameserver 1.1.1.1" > /etc/resolv.conf
-            sudo chattr +i /etc/resolv.conf
-            echo -e "${GREEN}DNS fixed and locked.${NC}"
-            read -p "Press Enter..." ;;
+            setup_network_fix
+            read -p "Press Enter to return..." ;;
         4)
             wget -O rathole-iran.sh https://bayanbox.ir/download/1459681187354412327/rathole-iran.sh && sed -i 's/\r$//' rathole-iran.sh && chmod +x rathole-iran.sh && ./rathole-iran.sh ;;
         5)
@@ -130,8 +160,7 @@ while true; do
             read -p "Select: " watch_opt
             if [ "$watch_opt" == "1" ]; then
                 wget -O /root/rathole_watchdog.sh https://bayanbox.ir/download/974175030198953681/rathole-watchdog.sh
-                chmod +x /root/rathole_watchdog.sh
-                /root/rathole_watchdog.sh
+                chmod +x /root/rathole_watchdog.sh && /root/rathole_watchdog.sh
             else
                 sudo systemctl stop rathole_watchdog.service || true
                 sudo systemctl disable rathole_watchdog.service || true
@@ -140,13 +169,12 @@ while true; do
                 pkill -f rathole_watchdog.sh || true
                 rm /root/rathole_watchdog.sh /root/rathole_watchdog.conf || true
             fi
-            read -p "Done. Press Enter..." ;;
+            read -p "Operation Done. Press Enter..." ;;
         7)
             wget -qO setup.sh https://bayanbox.ir/download/6376663628506155341/setup.sh && sed -i 's/\r$//' setup.sh && chmod +x setup.sh && ./setup.sh ;;
         8)
             wget -q -O setup.sh https://raw.githubusercontent.com/2amir563/-khodamneveshtamDaggerConnect/main/setup.sh && sed -i 's/\r$//' setup.sh && chmod +x setup.sh && ./setup.sh ;;
         9)
-            # استفاده از فایلی که خودتان آپلود کرده‌اید
             wget -O restart-server.sh https://bayanbox.ir/download/6116420477492192131/kole-code-dastor-restart-server.sh && sed -i 's/\r$//' restart-server.sh && chmod +x restart-server.sh && ./restart-server.sh ;;
         11)
             optimize_ram
