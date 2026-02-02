@@ -7,9 +7,12 @@ RED='\033[0;31m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-# --- Add Alias for easy access ---
+# --- Add Alias for easy access (REVISED) ---
+# اصلاح شده: استفاده از نام فایل با m کوچک برای هماهنگی کامل
+SCRIPT_PATH="$(pwd)/management-iran-server.sh"
 if ! grep -q "iran-manager" ~/.bashrc; then
-    echo "alias iran-manager='$(pwd)/Management-iran-server.sh'" >> ~/.bashrc
+    echo "alias iran-manager='$SCRIPT_PATH'" >> ~/.bashrc
+    echo -e "${GREEN}Alias 'iran-manager' added to .bashrc${NC}"
     source ~/.bashrc 2>/dev/null
 fi
 
@@ -67,9 +70,9 @@ display_menu() {
     echo -e "${YELLOW}       SERVER MANAGEMENT & TUNNEL TOOLS          ${NC}"
     echo -e "${CYAN}==================================================${NC}"
     echo -e "${RED}!!! SECURITY TIP !!!${NC}"
-    echo -e "${WHITE}Baraye amniat dar ghot'ie internet, aval ba dastoor:${NC}"
+    echo -e "${NC}Baraye amniat dar ghot'ie internet, aval ba dastoor:${NC}"
     echo -e "${GREEN}tmux new -s management${NC}"
-    echo -e "${WHITE}vared shavid, sepas iran-manager ra ejra konid.${NC}"
+    echo -e "${NC}vared shavid, sepas iran-manager ra ejra konid.${NC}"
     echo -e "${CYAN}--------------------------------------------------${NC}"
     echo -e "1. Install Tools (Zip, JQ, Curl, Screen, Tmux, etc.)"
     echo -e "2. Set Timezone (Tehran) & UTF-8 (Persian Support)"
@@ -143,6 +146,7 @@ while true; do
         8)
             wget -q -O setup.sh https://raw.githubusercontent.com/2amir563/-khodamneveshtamDaggerConnect/main/setup.sh && sed -i 's/\r$//' setup.sh && chmod +x setup.sh && ./setup.sh ;;
         9)
+            # استفاده از فایلی که خودتان آپلود کرده‌اید
             wget -O restart-server.sh https://bayanbox.ir/download/6116420477492192131/kole-code-dastor-restart-server.sh && sed -i 's/\r$//' restart-server.sh && chmod +x restart-server.sh && ./restart-server.sh ;;
         11)
             optimize_ram
