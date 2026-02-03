@@ -8,65 +8,57 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 # --- Add Alias for easy access ---
-# In bakhsh masire script ro baraye dastoor iran-manager tanzim mikone
-SCRIPT_PATH="$(cd "$(dirname "$0")" && pwd)/management-iran-server.sh"
+# Islah: Masire sabet baraye kar kardan dar hameja
+SCRIPT_PATH="/root/management-iran-server.sh"
 if ! grep -q "iran-manager" ~/.bashrc; then
     echo "alias iran-manager='bash $SCRIPT_PATH'" >> ~/.bashrc
     source ~/.bashrc 2>/dev/null
 fi
 
-# --- Function to Install Packages via dpkg (Islah shode baraye Ping) ---
+# --- Function to Install Packages Safely (FIXED) ---
+# In bakhsh islah shod ta diger error GLIBC nadehad
 install_pkg() {
     local name=$1
-    local url=$2
+    echo -e "${YELLOW}Installing $name (Official Repo)...${NC}"
     
-    # Islah: Agar darkhast baraye Ping bud, az makhazene asli nasb mikone ta GLIBC error nade
-    if [ "$name" == "ping" ]; then
-        echo -e "${YELLOW}Installing $name az makhazene asli (baraye raf'e error)...${NC}"
-        sudo apt update && sudo apt install iputils-ping -y
-        return
-    fi
-
-    echo -e "${YELLOW}Installing $name...${NC}"
-    wget -q -O "/tmp/$name.deb" "$url"
+    # Map kardan nade-haye khass be name paki-ha
+    local pkg_name=$name
+    if [ "$name" == "ping" ]; then pkg_name="iputils-ping"; fi
+    
+    sudo apt-get install "$pkg_name" -y
     if [ $? -eq 0 ]; then
-        sudo dpkg -i "/tmp/$name.deb"
-        rm "/tmp/$name.deb"
         echo -e "${GREEN}$name ba movafaghiat nasb shod.${NC}"
     else
-        echo -e "${RED}Khataye download $name${NC}"
+        echo -e "${RED}Khatayi dar nasbe $name pish amad.${NC}"
     fi
 }
 
-# --- Function to Configure DNS & Hosts (Halle moshkele Hostname) ---
+# --- Function to Configure DNS & Hosts (FINAL AUTO-FIX) ---
 setup_network_fix() {
     echo -e "${YELLOW}Configuring DNS and Hosts file (Permanent Fix)...${NC}"
     
-    # 1. Halle khodkare error "unable to resolve host"
+    # 1. Resolve Hostname Error
     local current_hostname=$(hostname)
     sudo chattr -i /etc/hosts 2>/dev/null
     if ! grep -q "$current_hostname" /etc/hosts; then
         echo "127.0.0.1 $current_hostname" >> /etc/hosts
-        echo -e "${GREEN}Hostname ($current_hostname) be hosts ezafe shod.${NC}"
+        echo -e "${GREEN}Hostname ($current_hostname) added to hosts file.${NC}"
     fi
 
-    # 2. Unlock kardan baraye edit
-    sudo chattr -i /etc/resolv.conf 2>/dev/null
-    
-    # Update Hosts baraye GitHub
-    if ! grep -q "raw.githubusercontent.com" /etc/hosts; then
-        echo -e "\n185.199.108.133 raw.githubusercontent.com" >> /etc/hosts
-        echo -e "185.199.109.133 raw.githubusercontent.com" >> /etc/hosts
-        echo -e "185.199.110.133 raw.githubusercontent.com" >> /etc/hosts
-        echo -e "185.199.111.133 raw.githubusercontent.com" >> /etc/hosts
-        echo -e "${GREEN}GitHub hosts ezafe shod.${NC}"
-    fi
+    # 2. Add GitHub IPs to bypass disruptions
+    sed -i '/raw.githubusercontent.com/d' /etc/hosts
+    echo -e "\n185.199.108.133 raw.githubusercontent.com" >> /etc/hosts
+    echo -e "185.199.109.133 raw.githubusercontent.com" >> /etc/hosts
+    echo -e "185.199.110.133 raw.githubusercontent.com" >> /etc/hosts
+    echo -e "185.199.111.133 raw.githubusercontent.com" >> /etc/hosts
+    sudo chattr +i /etc/hosts 2>/dev/null
 
-    # DNS Configuration Question
+    # 3. DNS Configuration
     echo -e "1. Use Default DNS (8.8.8.8, 1.1.1.1)"
     echo -e "2. Enter Custom DNS (Agar DNS ekhtesasi darid)"
     read -p "Select DNS option: " dns_opt
     
+    sudo chattr -i /etc/resolv.conf 2>/dev/null
     if [ "$dns_opt" == "2" ]; then
         read -p "Enter Primary DNS: " dns1
         read -p "Enter Secondary DNS: " dns2
@@ -75,9 +67,8 @@ setup_network_fix() {
         echo -e "nameserver 8.8.8.8\nnameserver 1.1.1.1" > /etc/resolv.conf
     fi
     
-    # Ghofl kardan baraye jologiri az reset shodan
-    sudo chattr +i /etc/resolv.conf /etc/hosts 2>/dev/null
-    echo -e "${GREEN}DNS va Hosts GHOFL shodan!${NC}"
+    sudo chattr +i /etc/resolv.conf 2>/dev/null
+    echo -e "${GREEN}DNS and Hosts are now FIXED and LOCKED!${NC}"
 }
 
 # --- Function to Change SSH Port ---
@@ -89,7 +80,7 @@ change_ssh_port() {
         sudo ufw allow $new_port/tcp
     fi
     sudo systemctl restart ssh
-    echo -e "${GREEN}Porte SSH be $new_port taghyir yaft. Test konid!${NC}"
+    echo -e "${GREEN}SSH Port changed to $new_port. Test konid!${NC}"
 }
 
 # --- Function to Enable BBR ---
@@ -99,9 +90,9 @@ enable_bbr() {
         echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf
         echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
         sudo sysctl -p
-        echo -e "${GREEN}BBR fa'al shod!${NC}"
+        echo -e "${GREEN}BBR Successfully Enabled!${NC}"
     else
-        echo -e "${CYAN}BBR az ghabl fa'al bood.${NC}"
+        echo -e "${CYAN}BBR ghablan fa'al shode ast.${NC}"
     fi
 }
 
@@ -109,7 +100,7 @@ enable_bbr() {
 optimize_ram() {
     echo -e "${YELLOW}Cleaning RAM Cache...${NC}"
     sync; echo 3 | sudo tee /proc/sys/vm/drop_caches
-    echo -e "${GREEN}RAM Cache pak shod.${NC}"
+    echo -e "${GREEN}RAM Cache ba movafaghiat pak shod.${NC}"
 }
 
 # --- Main Menu ---
@@ -119,13 +110,13 @@ display_menu() {
     echo -e "${YELLOW}       SERVER MANAGEMENT & TUNNEL TOOLS          ${NC}"
     echo -e "${CYAN}==================================================${NC}"
     echo -e "${RED}!!! SECURITY TIP !!!${NC}"
-    echo -e "${NC}Baraye amniat, aval dastoor zir ra bezanid:${NC}"
+    echo -e "${NC}Baraye amniat, aval ba dastoor:${NC}"
     echo -e "${GREEN}tmux new -s management${NC}"
-    echo -e "${NC}sepas iran-manager ra ejra konid.${NC}"
+    echo -e "${NC}vared shavid, sepas iran-manager ra ejra konid.${NC}"
     echo -e "${CYAN}--------------------------------------------------${NC}"
-    echo -e "1. Install Tools (Fix Ping, Zip, JQ, Tmux, etc.)"
+    echo -e "1. Install Tools (Zip, JQ, Curl, Screen, Tmux, Ping, etc.)"
     echo -e "2. Set Timezone (Tehran) & UTF-8 Support"
-    echo -e "3. Fix DNS & Hosts (Permanent & Auto-Hostname)"
+    echo -e "3. Fix DNS & Hosts (Permanent & Auto Hostname Fix)"
     echo -e "4. Rathole Tunnel - IRAN Server"
     echo -e "5. Rathole Tunnel - KHAREJ Server"
     echo -e "6. Watchdog Rathole (Install/Uninstall)"
@@ -147,23 +138,15 @@ while true; do
     read -p "Choose an option: " opt
     case $opt in
         1)
-            install_pkg "zip" "https://bayanbox.ir/download/7507059655879743978/zip-3.0-11-amd64.deb"
-            install_pkg "unzip" "https://bayanbox.ir/download/4551765058142887445/unzip-6.0-26ubuntu3.2-amd64.deb"
-            install_pkg "jq" "https://bayanbox.ir/download/4704249055834606175/jq-1.6-1-amd64.deb"
-            install_pkg "curl" "https://bayanbox.ir/download/2620187451991243943/curl-7.68.0-1ubuntu2-amd64.deb"
-            install_pkg "net-tools" "https://bayanbox.ir/download/2926862857888342028/net-tools-2.10-1.1ubuntu1-arm64.deb"
-            install_pkg "screen" "https://bayanbox.ir/download/6165034409908352421/screen-4.8.0-2ubuntu0.1-arm64.deb"
-            install_pkg "tmux" "https://bayanbox.ir/download/7583716318989635982/tmux-3.0a-2ubuntu0.4-amd64.deb"
-            install_pkg "iperf3" "https://bayanbox.ir/download/6989692815800249588/iperf3-3.7-3-amd64.deb"
-            install_pkg "nload" "https://bayanbox.ir/download/1691938829080887785/nload-0.7.4-2build4-amd64.deb"
-            install_pkg "htop" "https://bayanbox.ir/download/6700648099120155448/htop-2.2.0-2-arm64.deb"
-            install_pkg "ping" "OFFICIAL_REPO"
-            install_pkg "vim" "https://bayanbox.ir/download/8165786091380549689/vim-8.1.2269-1ubuntu5.32-amd64.deb"
+            sudo apt-get update
+            for tool in zip unzip jq curl net-tools screen tmux iperf3 nload htop ping vim; do
+                install_pkg "$tool"
+            done
             read -p "Baraye bazgasht Enter bezanid..." ;;
         2)
             sudo timedatectl set-timezone Asia/Tehran
             sudo localectl set-locale LANG=en_US.UTF-8
-            read -p "Time va Locale ok shod. Enter bezanid..." ;;
+            read -p "Timezone va Locale tanzim shod. Enter bezanid..." ;;
         3)
             setup_network_fix
             read -p "Baraye bazgasht Enter bezanid..." ;;
@@ -173,7 +156,7 @@ while true; do
             bash <(curl -Ls --ipv4 https://raw.githubusercontent.com/amir198665/Rathole-Tunnel/main/rathole_v2.sh) ;;
         6)
             echo "1. Install / 2. Uninstall"
-            read -p "Select: " watch_opt
+            read -p "Entekhab konid: " watch_opt
             if [ "$watch_opt" == "1" ]; then
                 wget -O /root/rathole_watchdog.sh https://bayanbox.ir/download/974175030198953681/rathole-watchdog.sh
                 chmod +x /root/rathole_watchdog.sh && /root/rathole_watchdog.sh
@@ -196,10 +179,10 @@ while true; do
             optimize_ram
             read -p "Enter bezanid..." ;;
         12)
-            echo "Setting up Auto-Clear RAM..."
+            echo "Setting up Auto-Clear RAM (Every 231 Mins & Boot)..."
             (crontab -l 2>/dev/null | grep -v "drop_caches"; echo "*/231 * * * * sync; echo 3 > /proc/sys/vm/drop_caches") | crontab -
             (crontab -l 2>/dev/null | grep -v "@reboot"; echo "@reboot sync; echo 3 > /proc/sys/vm/drop_caches") | crontab -
-            echo -e "${GREEN}Auto-Optimization fa'al shod!${NC}"
+            echo -e "${GREEN}Auto-Optimization (231 min) fa'al shod!${NC}"
             read -p "Enter bezanid..." ;;
         13)
             enable_bbr
@@ -209,22 +192,16 @@ while true; do
             read -p "Enter bezanid..." ;;
         10)
             clear
-            echo -e "${YELLOW}--- Rahnamaye SSH ---${NC}"
-            echo -e "1. Agar SSH baste shod az Console Panel estefade konid."
-            echo -e "2. Porte SSH ra be 8443 ya 443 taghyir dehid."
-            echo -e "3. SSH via Tunnel: ssh root@localhost -p [LOCAL_PORT]"
+            echo -e "${YELLOW}--- SSH Guide ---${NC}"
+            echo -e "1. Agar SSH baste shod, az Console Hosting (VNC) estefade konid."
+            echo -e "2. Port SSH ra be 8443 ya 443 taghyir dehid."
             echo -e ""
             echo -e "${YELLOW}--- Screen & Tmux ---${NC}"
             echo -e "Screen: screen -S name -> Ctrl+A sepas D (Hide) -> screen -r name"
             echo -e "Tmux: tmux new -s name -> Ctrl+B sepas D (Hide) -> tmux attach -t name"
-            echo -e ""
-            echo -e "${YELLOW}--- Dastoorat Linux ---${NC}"
-            echo -e "rm -r [dir] / pkill -f [name] / htop / nload / df -h"
-            echo -e "chattr -i /etc/resolv.conf (Baz kardan ghofl DNS)"
-            echo -e "chattr +i /etc/resolv.conf (Ghofl kardan DNS)"
             echo -e "--------------------------------------------"
             read -p "Baraye bazgasht Enter bezanid..." ;;
         0) exit 0 ;;
-        *) echo -e "${RED}Invalid!${NC}" && sleep 1 ;;
+        *) echo -e "${RED}Ghalat!${NC}" && sleep 1 ;;
     esac
 done
