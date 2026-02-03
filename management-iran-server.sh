@@ -8,7 +8,7 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 # --- Add Alias for easy access ---
-# Islah: Masire sabet baraye kar kardan dar hameja
+# Islah: Masire sabet dar /root baraye kar kardan dar hame ja
 SCRIPT_PATH="/root/management-iran-server.sh"
 if ! grep -q "iran-manager" ~/.bashrc; then
     echo "alias iran-manager='bash $SCRIPT_PATH'" >> ~/.bashrc
@@ -16,18 +16,18 @@ if ! grep -q "iran-manager" ~/.bashrc; then
 fi
 
 # --- Function to Install Packages Safely (FIXED) ---
-# In bakhsh islah shod ta diger error GLIBC nadehad
+# In bakhsh islah shod: Dige az link-haye .deb khariji estefade nemishavad
 install_pkg() {
     local name=$1
     echo -e "${YELLOW}Installing $name (Official Repo)...${NC}"
     
-    # Map kardan nade-haye khass be name paki-ha
+    # Map kardan name paki-ha baraye nasbe sahih
     local pkg_name=$name
     if [ "$name" == "ping" ]; then pkg_name="iputils-ping"; fi
     
     sudo apt-get install "$pkg_name" -y
     if [ $? -eq 0 ]; then
-        echo -e "${GREEN}$name ba movafaghiat nasb shod.${NC}"
+        echo -e "${GREEN}$name ok shod.${NC}"
     else
         echo -e "${RED}Khatayi dar nasbe $name pish amad.${NC}"
     fi
@@ -37,7 +37,7 @@ install_pkg() {
 setup_network_fix() {
     echo -e "${YELLOW}Configuring DNS and Hosts file (Permanent Fix)...${NC}"
     
-    # 1. Resolve Hostname Error
+    # 1. Resolve Hostname Error (Fixes 'unable to resolve host')
     local current_hostname=$(hostname)
     sudo chattr -i /etc/hosts 2>/dev/null
     if ! grep -q "$current_hostname" /etc/hosts; then
@@ -55,7 +55,7 @@ setup_network_fix() {
 
     # 3. DNS Configuration
     echo -e "1. Use Default DNS (8.8.8.8, 1.1.1.1)"
-    echo -e "2. Enter Custom DNS (Agar DNS ekhtesasi darid)"
+    echo -e "2. Enter Custom DNS"
     read -p "Select DNS option: " dns_opt
     
     sudo chattr -i /etc/resolv.conf 2>/dev/null
@@ -73,14 +73,14 @@ setup_network_fix() {
 
 # --- Function to Change SSH Port ---
 change_ssh_port() {
-    read -p "Enter new SSH port (Recommended: 8443 or 443): " new_port
+    read -p "Enter new SSH port (e.g. 8443): " new_port
     echo -e "${YELLOW}Changing SSH port to $new_port...${NC}"
     sudo sed -i "s/^#\?Port .*/Port $new_port/" /etc/ssh/sshd_config
     if command -v ufw &> /dev/null; then
         sudo ufw allow $new_port/tcp
     fi
     sudo systemctl restart ssh
-    echo -e "${GREEN}SSH Port changed to $new_port. Test konid!${NC}"
+    echo -e "${GREEN}SSH Port changed to $new_port.${NC}"
 }
 
 # --- Function to Enable BBR ---
@@ -92,7 +92,7 @@ enable_bbr() {
         sudo sysctl -p
         echo -e "${GREEN}BBR Successfully Enabled!${NC}"
     else
-        echo -e "${CYAN}BBR ghablan fa'al shode ast.${NC}"
+        echo -e "${CYAN}BBR az ghabl fa'al bood.${NC}"
     fi
 }
 
@@ -100,7 +100,7 @@ enable_bbr() {
 optimize_ram() {
     echo -e "${YELLOW}Cleaning RAM Cache...${NC}"
     sync; echo 3 | sudo tee /proc/sys/vm/drop_caches
-    echo -e "${GREEN}RAM Cache ba movafaghiat pak shod.${NC}"
+    echo -e "${GREEN}RAM Cache pak shod.${NC}"
 }
 
 # --- Main Menu ---
@@ -110,11 +110,9 @@ display_menu() {
     echo -e "${YELLOW}       SERVER MANAGEMENT & TUNNEL TOOLS          ${NC}"
     echo -e "${CYAN}==================================================${NC}"
     echo -e "${RED}!!! SECURITY TIP !!!${NC}"
-    echo -e "${NC}Baraye amniat, aval ba dastoor:${NC}"
-    echo -e "${GREEN}tmux new -s management${NC}"
-    echo -e "${NC}vared shavid, sepas iran-manager ra ejra konid.${NC}"
+    echo -e "${NC}Aval ba dastoor: ${GREEN}tmux new -s management${NC} vared shavid.${NC}"
     echo -e "${CYAN}--------------------------------------------------${NC}"
-    echo -e "1. Install Tools (Zip, JQ, Curl, Screen, Tmux, Ping, etc.)"
+    echo -e "1. Install All Tools (Zip, JQ, Curl, Tmux, Ping, etc. - SAFE)"
     echo -e "2. Set Timezone (Tehran) & UTF-8 Support"
     echo -e "3. Fix DNS & Hosts (Permanent & Auto Hostname Fix)"
     echo -e "4. Rathole Tunnel - IRAN Server"
@@ -126,7 +124,7 @@ display_menu() {
     echo -e "11. Clear RAM Cache (Manual)"
     echo -e "12. Setup Auto-Clear RAM (Every 231 Mins & Boot)"
     echo -e "13. Enable BBR (Speed & Network Optimizer)"
-    echo -e "14. Change SSH Port (Anti-Filter Port)"
+    echo -e "14. Change SSH Port"
     echo -e "10. Help: SSH Guide, Linux Commands, Screen/Tmux"
     echo -e "0. Exit"
     echo -e "${CYAN}--------------------------------------------------${NC}"
@@ -139,6 +137,7 @@ while true; do
     case $opt in
         1)
             sudo apt-get update
+            # Islah: Inja dige be soorate automatic az مخازن رسمی nasb mishavad
             for tool in zip unzip jq curl net-tools screen tmux iperf3 nload htop ping vim; do
                 install_pkg "$tool"
             done
@@ -179,7 +178,6 @@ while true; do
             optimize_ram
             read -p "Enter bezanid..." ;;
         12)
-            echo "Setting up Auto-Clear RAM (Every 231 Mins & Boot)..."
             (crontab -l 2>/dev/null | grep -v "drop_caches"; echo "*/231 * * * * sync; echo 3 > /proc/sys/vm/drop_caches") | crontab -
             (crontab -l 2>/dev/null | grep -v "@reboot"; echo "@reboot sync; echo 3 > /proc/sys/vm/drop_caches") | crontab -
             echo -e "${GREEN}Auto-Optimization (231 min) fa'al shod!${NC}"
@@ -193,14 +191,13 @@ while true; do
         10)
             clear
             echo -e "${YELLOW}--- SSH Guide ---${NC}"
-            echo -e "1. Agar SSH baste shod, az Console Hosting (VNC) estefade konid."
+            echo -e "1. Agar SSH baste shod, az Console VNC estefade konid."
             echo -e "2. Port SSH ra be 8443 ya 443 taghyir dehid."
             echo -e ""
             echo -e "${YELLOW}--- Screen & Tmux ---${NC}"
-            echo -e "Screen: screen -S name -> Ctrl+A sepas D (Hide) -> screen -r name"
-            echo -e "Tmux: tmux new -s name -> Ctrl+B sepas D (Hide) -> tmux attach -t name"
-            echo -e "--------------------------------------------"
-            read -p "Baraye bazgasht Enter bezanid..." ;;
+            echo -e "Screen: screen -S name -> Ctrl+A then D -> screen -r name"
+            echo -e "Tmux: tmux new -s name -> Ctrl+B then D -> tmux attach -t name"
+            read -p "Enter bezanid..." ;;
         0) exit 0 ;;
         *) echo -e "${RED}Ghalat!${NC}" && sleep 1 ;;
     esac
